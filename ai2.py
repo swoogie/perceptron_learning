@@ -1,6 +1,14 @@
+from fileinput import filename
 import random
 from parso import split_lines
+import math
+import matplotlib.pyplot as plt
+import numpy as np
 
+EPOCHS = 100
+LEARN_TEST_RATIO = 0.7
+RANDOM_WEIGHT = 0.123123
+LEARN_RATE = 0.001
 
 def parseCancerData():
     readFile = open("breast_cancer.txt", "r")
@@ -65,9 +73,102 @@ def parseIrisData():
     writeFile.close()
 
 
+def getFileData(fileName):
+    readFile = open(fileName)
+    fileData = readFile.read()
+    readFile.close()
+    fileData = split_lines(fileData)
+    length = len(fileData)
+    index = round(LEARN_TEST_RATIO * length)
+    return fileData[:index], fileData[index:]
+
+
+def parseLineData(line):
+    line = str(line).split(',')
+    t = float(line[-1])
+    x = [1]
+    for digit in range(len(line) - 1):
+        x.append(float(line[digit]))
+    return x, t
+
+
+def calculateA(x, w):
+    a = 0
+    for i in range(len(x)):
+        a += float(x[i]) * float(w[i])
+    return a
+
+
+def stepFunction(a):
+    if (a >= 0):
+        return 1
+    else:
+        return 0
+
+
+def sigmoidFunction(a):
+    return (1 / (1 + math.exp(-a)))  # e^-a
+
+
+def calculateAdaline(w, x, t, y, learnRate):
+    newW = []
+    for index, weight in enumerate(w):
+        newW.append(round(float(weight) + learnRate *
+                    (float(t) - float(y)) * float(x[index]), 4))
+    return newW
+
+
+def testingPhase(w, testData, aFunc):
+    count = 0
+    cost = 0
+    for line in testData:
+        x, t = parseLineData(line)
+        a = calculateA(x, w)
+        if (aFunc == 0):
+            y = stepFunction(a)
+        else:
+            y = sigmoidFunction(a)
+        if (round(y) == int(t)):
+            count += 1
+        else:
+            cost += pow(y - t, 2)
+    return ((count / len(testData)) * 100), round(cost, 3)
+
+
+def learningPhase(learnData, testData, aFunc, learnRate):
+    positives = []
+    cost = []
+    weights = []
+    for _ in str(learnData[0]).split(','):
+        weights.append(RANDOM_WEIGHT)
+
+    for _ in range(EPOCHS):
+        for line in learnData:
+            x, t = parseLineData(line)
+            a = calculateA()
+            if (aFunc == 0):
+                y = stepFunction(a)
+            else:
+                y = sigmoidFunction(a)
+            if (y != t):
+                weights = calculateAdaline(weights, x, t, y, learnRate)
+        positive, err = testingPhase(weights, learnData, aFunc)
+        positives.append(positive)
+        cost.append(err)
+    return positives, cost, weights
+
+
 def main():
     parseCancerData()
     parseIrisData()
+    fileNames = ["iris_new.txt", "cancer_new.txt"]
+    for fileName in fileNames:
+        learnData, testData = getFileData(fileName)
+        print(f"Using file {fileName}")
+        for i in range(2):
+            positives, cost, w = learningPhase(learnData, testData, i, LEARN_RATE)
+            
+            
 
 
 if __name__ == "__main__":
