@@ -1,5 +1,3 @@
-from fileinput import filename
-from multiprocessing.sharedctypes import Value
 import random
 from parso import split_lines
 import math
@@ -9,7 +7,6 @@ import numpy as np
 EPOCHS = 100
 LEARN_TEST_RATIO = 0.7
 RANDOM_WEIGHT = 0.123123
-LEARN_RATE = 0.001
 
 
 def parseCancerData():
@@ -168,7 +165,7 @@ def learningAndTesting(learnData, testData, aFunc, learnRate, useTestData):
     return positives, cost, weights
 
 
-def plot(val, ylabel):
+def plot(val, ylabel, title):
     x = np.arange(0, EPOCHS)
     y = val
 
@@ -179,7 +176,27 @@ def plot(val, ylabel):
     ax.set_ylabel(ylabel)
     ax.set_xlabel("Epoch index")
     ax.plot(x, y)
+    plt.title(title)
+    plt.show()
 
+
+def plotLearning(data1, data2, data3, yLabel, title):
+    x = np.arange(0, EPOCHS)
+    y = data1
+    z = data2
+    b = data3
+
+    fig, ax = plt.subplots()
+
+    ax.plot(x, y, label='0,001')
+    ax.plot(x, z, label='0,01')
+    ax.plot(x, b, label='0,1')
+
+    ax.set_ylabel(yLabel)
+    ax.set_xlabel("Epoch index")
+
+    ax.legend()
+    plt.title(title)
     plt.show()
 
 
@@ -188,23 +205,52 @@ def main():
     parseIrisData()
     fileNames = ["iris_new.txt", "cancer_new.txt"]
     useTestData = [True, False]
+    learnRate = 0.001
     for fileName in fileNames:
         learnData, testData = getFileData(fileName)
         print(f"Using file {fileName}")
         for i in range(2):
             for use in useTestData:
                 positives, cost, w = learningAndTesting(
-                    learnData, testData, i, LEARN_RATE, use)
+                    learnData, testData, i, learnRate, use)
                 print("Using test data for testing") if use else print(
                     "Using learn data for testing")
-                print("Activation function: ", end='')
-                print("step") if i == 0 else print("sigmoid")
+                if (i == 0):
+                    aFunName = "step"
+                else:
+                    aFunName = "sigmoid"
+                print(f"Activation function: {aFunName}")
                 print(f"Positives: {positives[-1]}")
                 print(f"Cost: {cost[-1]}")
                 print(f"Weights: {w}")
-                plot(positives, "Accuracy (%)")
-                plot(cost, "Error")
+                if use:
+                    plot(positives, "Accuracy %",
+                         f"{fileName} Accuracy using test data, aFun: {aFunName}")
+                    plot(cost, "Error",
+                         f"{fileName} Error using test data, aFun: {aFunName}")
+                else:
+                    plot(positives, "Accuracy %",
+                         f"{fileName} Accuracy using learning data, aFun: {aFunName}")
+                    plot(
+                        cost, "Error", f"{fileName} Error using learning data, aFun: {aFunName}")
                 print()
+
+    learnData, testData = getFileData(fileNames[1])
+
+    positivesList = []
+    costList = []
+
+    for _ in range(3):
+        positives, cost, w = learningAndTesting(
+            learnData, testData, 1, learnRate, True)
+        positivesList.append(positives)
+        costList.append(cost)
+        learnRate = learnRate * 10
+
+    plotLearning(positivesList[0], positivesList[1],
+                 positivesList[2], "Accuracy %", "Cancer accuracy using test data, sigmoid activation")
+    plotLearning(
+        costList[0], costList[1], costList[2], "Error", "Cancer error using test data, sigmoid activation")
 
 
 if __name__ == "__main__":
