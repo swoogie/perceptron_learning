@@ -82,7 +82,7 @@ def getFileData(fileName):
     fileData = split_lines(fileData)
     length = len(fileData)
     index = round(LEARN_TEST_RATIO * length)
-    return fileData[:index], fileData[index:]
+    return fileData[:index], fileData[index:-1]
 
 
 def parseLineData(line):
@@ -137,7 +137,20 @@ def testingPhase(w, testData, aFunc):
     return ((count / len(testData)) * 100), round(cost, 3)
 
 
-def learningPhase(learnData, testData, aFunc, learnRate):
+def learningPhase(weights, learnData, aFunc, learnRate):
+    for line in learnData:
+        x, t = parseLineData(line)
+        a = calculateA(x, weights)
+        if (aFunc == 0):
+            y = stepFunction(a)
+        else:
+            y = sigmoidFunction(a)
+        if (y != t):
+            weights = calculateAdaline(weights, x, t, y, learnRate)
+    return weights
+
+
+def learningAndTesting(learnData, testData, aFunc, learnRate, useTestData):
     positives = []
     cost = []
     weights = []
@@ -145,16 +158,11 @@ def learningPhase(learnData, testData, aFunc, learnRate):
         weights.append(RANDOM_WEIGHT)
 
     for _ in range(EPOCHS):
-        for line in learnData:
-            x, t = parseLineData(line)
-            a = calculateA()
-            if (aFunc == 0):
-                y = stepFunction(a)
-            else:
-                y = sigmoidFunction(a)
-            if (y != t):
-                weights = calculateAdaline(weights, x, t, y, learnRate)
-        positive, err = testingPhase(weights, learnData, aFunc)
+        weights = learningPhase(weights, learnData, aFunc, learnRate)
+        if useTestData:
+            positive, err = testingPhase(weights, testData, aFunc)
+        else:
+            positive, err = testingPhase(weights, learnData, aFunc)
         positives.append(positive)
         cost.append(err)
     return positives, cost, weights
@@ -162,7 +170,7 @@ def learningPhase(learnData, testData, aFunc, learnRate):
 
 def plot(val, ylabel):
     x = np.arange(0, EPOCHS)
-    y = Value
+    y = val
 
     fig, ax = plt.subplots()
 
@@ -179,20 +187,24 @@ def main():
     parseCancerData()
     parseIrisData()
     fileNames = ["iris_new.txt", "cancer_new.txt"]
+    useTestData = [True, False]
     for fileName in fileNames:
         learnData, testData = getFileData(fileName)
         print(f"Using file {fileName}")
         for i in range(2):
-            positives, cost, w = learningPhase(
-                learnData, testData, i, LEARN_RATE)
-            print("Activation function: ", end='')
-            print("step") if i == 0 else print("sigmoid")
-            print(f"Positives: {positives[-1]}")
-            print(f"Cost: {cost[-1]}")
-            print(f"Weights: {w}")
-            plot(positives, "Accuracy (%)")
-            plot(cost, "Error")
-            print()
+            for use in useTestData:
+                positives, cost, w = learningAndTesting(
+                    learnData, testData, i, LEARN_RATE, use)
+                print("Using test data for testing") if use else print(
+                    "Using learn data for testing")
+                print("Activation function: ", end='')
+                print("step") if i == 0 else print("sigmoid")
+                print(f"Positives: {positives[-1]}")
+                print(f"Cost: {cost[-1]}")
+                print(f"Weights: {w}")
+                plot(positives, "Accuracy (%)")
+                plot(cost, "Error")
+                print()
 
 
 if __name__ == "__main__":
