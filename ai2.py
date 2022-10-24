@@ -1,4 +1,5 @@
 from fileinput import filename
+from multiprocessing.sharedctypes import Value
 import random
 from parso import split_lines
 import math
@@ -9,6 +10,7 @@ EPOCHS = 100
 LEARN_TEST_RATIO = 0.7
 RANDOM_WEIGHT = 0.123123
 LEARN_RATE = 0.001
+
 
 def parseCancerData():
     readFile = open("breast_cancer.txt", "r")
@@ -158,6 +160,21 @@ def learningPhase(learnData, testData, aFunc, learnRate):
     return positives, cost, weights
 
 
+def plot(val, ylabel):
+    x = np.arange(0, EPOCHS)
+    y = Value
+
+    fig, ax = plt.subplots()
+
+    ax.set_ylim(ymin=0, ymax=100)
+    ax.set_xlim(xmin=0, xmax=100)
+    ax.set_ylabel(ylabel)
+    ax.set_xlabel("Epoch index")
+    ax.plot(x, y)
+
+    plt.show()
+
+
 def main():
     parseCancerData()
     parseIrisData()
@@ -166,9 +183,16 @@ def main():
         learnData, testData = getFileData(fileName)
         print(f"Using file {fileName}")
         for i in range(2):
-            positives, cost, w = learningPhase(learnData, testData, i, LEARN_RATE)
-            
-            
+            positives, cost, w = learningPhase(
+                learnData, testData, i, LEARN_RATE)
+            print("Activation function: ", end='')
+            print("step") if i == 0 else print("sigmoid")
+            print(f"Positives: {positives[-1]}")
+            print(f"Cost: {cost[-1]}")
+            print(f"Weights: {w}")
+            plot(positives, "Accuracy (%)")
+            plot(cost, "Error")
+            print()
 
 
 if __name__ == "__main__":
